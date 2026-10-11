@@ -26,8 +26,11 @@ export const AdminUsuarios = () => {
   };
 
   const guardar = (datos: DatosUsuario) => {
+    // Nadie puede cambiar su propio rol (igual que en Perfil).
     // El vendedor solo puede crear clientes: se fuerza el rol por seguridad.
-    const rol = esAdmin ? datos.rol : "cliente";
+    const rol = editando?.id === usuario.id ? usuario.rol
+              : esAdmin ? datos.rol
+              : "cliente";
 
     if (editando) {
       actualizarLista(usuarios.map((u) => (u.id === editando.id ? { ...u, ...datos, rol } : u)));
@@ -66,7 +69,11 @@ export const AdminUsuarios = () => {
         <FormularioUsuario
           key={editando?.id ?? "nuevo"}
           inicial={editando ?? undefined}
-          rolesDisponibles={esAdmin ? ["administrador", "vendedor", "cliente"] : ["cliente"]}
+          rolesDisponibles={
+            editando?.id === usuario.id ? [usuario.rol]
+            : esAdmin ? ["administrador", "vendedor", "cliente"]
+            : ["cliente"]
+          }
           dominios={DOMINIOS_GENERALES}
           textoBoton={editando ? "Guardar cambios" : "Crear usuario"}
           limpiarAlGuardar={!editando}
