@@ -1,0 +1,27 @@
+/* Estilos propios mínimos: Bootstrap hace casi todo el trabajo. */
+
+/* Fondo de la portada */
+.hero {
+  background: linear-gradient(135deg, #1e5591, #00b4ff);
+}
+
+/* Las imágenes de las tarjetas tienen siempre la misma altura */
+.card-img-top {
+  height: 220px;
+  object-fit: contain; /* la foto se ve ENTERA (cover la recortaba) */
+  background: #fff;
+  padding: 8px;
+}
+
+/* Avatar genérico del perfil: círculo con la inicial */
+.avatar {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: #1e5591;
+  color: #fff;
+  font-size: 1.8rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
