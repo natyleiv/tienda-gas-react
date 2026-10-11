@@ -23,6 +23,3 @@ dist-ssr
 *.sln
 *.sw?
 
-# Guias de estudio internas del equipo (no se suben al repositorio)
-docs/GUIA_DEFENSA.md
-docs/Guia_Estudio_Tienda_React.pdf
