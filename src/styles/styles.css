@@ -65,3 +65,8 @@
 .logo-portada {
   filter: drop-shadow(0 0 3px #fff) drop-shadow(0 0 8px rgba(255, 255, 255, 0.8));
 }
+
+/* Ningún link del menú se parte en dos líneas */
+.navbar .nav-link {
+  white-space: nowrap;
+}

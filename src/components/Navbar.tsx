@@ -20,7 +20,7 @@ export const Navbar = () => {
   };
 
   return (
-    <nav className="navbar navbar-expand-lg navbar-dark bg-primary">
+    <nav className="navbar navbar-expand-xl navbar-dark bg-primary">
       <div className="container">
         {/* El logo sigue siendo Link: no necesita destacarse */}
         <Link className="navbar-brand fw-bold d-flex align-items-center" to="/" onClick={cerrarMenu}>
