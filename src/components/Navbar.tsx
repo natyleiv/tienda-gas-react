@@ -1,6 +1,6 @@
 // Menú superior. Las opciones cambian según el rol del usuario.
 import { useState } from "react";
-import { Link, useNavigate } from "react-router";
+import { Link, NavLink, useNavigate } from "react-router";
 import { useSesion } from "../context/SesionContext";
 import { useCarrito } from "../context/CarritoContext";
 
@@ -22,6 +22,7 @@ export const Navbar = () => {
   return (
     <nav className="navbar navbar-expand-lg navbar-dark bg-primary">
       <div className="container">
+        {/* El logo sigue siendo Link: no necesita destacarse */}
         <Link className="navbar-brand fw-bold" to="/" onClick={cerrarMenu}>
           Gas El Volcán
         </Link>
@@ -36,25 +37,26 @@ export const Navbar = () => {
         </button>
 
         <div className={"collapse navbar-collapse" + (abierto ? " show" : "")}>
+          {/* NavLink agrega la clase "active" al link de la página actual */}
           <ul className="navbar-nav me-auto">
             <li className="nav-item">
-              <Link className="nav-link" to="/catalogo" onClick={cerrarMenu}>Catálogo</Link>
+              <NavLink className="nav-link" to="/catalogo" onClick={cerrarMenu}>Catálogo</NavLink>
             </li>
             <li className="nav-item">
-              <Link className="nav-link" to="/contacto" onClick={cerrarMenu}>Contacto</Link>
+              <NavLink className="nav-link" to="/contacto" onClick={cerrarMenu}>Contacto</NavLink>
             </li>
 
             {/* Opciones solo para administrador */}
             {usuario?.rol === "administrador" && (
               <>
                 <li className="nav-item">
-                  <Link className="nav-link" to="/admin/usuarios" onClick={cerrarMenu}>Usuarios</Link>
+                  <NavLink className="nav-link" to="/admin/usuarios" onClick={cerrarMenu}>Usuarios</NavLink>
                 </li>
                 <li className="nav-item">
-                  <Link className="nav-link" to="/admin/productos" onClick={cerrarMenu}>Productos</Link>
+                  <NavLink className="nav-link" to="/admin/productos" onClick={cerrarMenu}>Productos</NavLink>
                 </li>
                 <li className="nav-item">
-                  <Link className="nav-link" to="/admin/categorias" onClick={cerrarMenu}>Categorías</Link>
+                  <NavLink className="nav-link" to="/admin/categorias" onClick={cerrarMenu}>Categorías</NavLink>
                 </li>
               </>
             )}
@@ -63,10 +65,10 @@ export const Navbar = () => {
             {usuario?.rol === "vendedor" && (
               <>
                 <li className="nav-item">
-                  <Link className="nav-link" to="/admin/productos" onClick={cerrarMenu}>Stock</Link>
+                  <NavLink className="nav-link" to="/admin/productos" onClick={cerrarMenu}>Stock</NavLink>
                 </li>
                 <li className="nav-item">
-                  <Link className="nav-link" to="/admin/usuarios" onClick={cerrarMenu}>Crear clientes</Link>
+                  <NavLink className="nav-link" to="/admin/usuarios" onClick={cerrarMenu}>Crear clientes</NavLink>
                 </li>
               </>
             )}
@@ -74,18 +76,18 @@ export const Navbar = () => {
 
           <ul className="navbar-nav align-items-lg-center">
             <li className="nav-item">
-              <Link className="nav-link" to="/carrito" onClick={cerrarMenu}>
-              <i className="bi bi-cart3 me-1"></i>
+              <NavLink className="nav-link" to="/carrito" onClick={cerrarMenu}>
+                <i className="bi bi-cart3 me-1"></i>
                 Carrito <span className="badge bg-light text-primary">{cantidadTotal}</span>
-              </Link>
+              </NavLink>
             </li>
 
             {usuario ? (
               <>
                 <li className="nav-item">
-                  <Link className="nav-link" to="/perfil" onClick={cerrarMenu}>
+                  <NavLink className="nav-link" to="/perfil" onClick={cerrarMenu}>
                     {usuario.nombre} ({usuario.rol})
-                  </Link>
+                  </NavLink>
                 </li>
                 <li className="nav-item">
                   <button className="btn btn-outline-light btn-sm" type="button" onClick={salir}>
@@ -96,10 +98,10 @@ export const Navbar = () => {
             ) : (
               <>
                 <li className="nav-item">
-                  <Link className="nav-link" to="/login" onClick={cerrarMenu}>Ingresar</Link>
+                  <NavLink className="nav-link" to="/login" onClick={cerrarMenu}>Ingresar</NavLink>
                 </li>
                 <li className="nav-item">
-                  <Link className="nav-link" to="/registro" onClick={cerrarMenu}>Registro</Link>
+                  <NavLink className="nav-link" to="/registro" onClick={cerrarMenu}>Registro</NavLink>
                 </li>
               </>
             )}

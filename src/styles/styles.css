@@ -25,3 +25,10 @@
   align-items: center;
   justify-content: center;
 }
+
+/* Menú: destaca la sección en la que está el usuario.
+   NavLink agrega la clase "active" al link de la página actual. */
+.navbar .nav-link.active {
+  font-weight: 600;
+  border-bottom: 2px solid #fff;
+}
