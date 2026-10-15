@@ -32,3 +32,36 @@
   font-weight: 600;
   border-bottom: 2px solid #fff;
 }
+
+/* Menú más notorio: Bootstrap deja los links casi transparentes (55% blanco).
+   Aquí los dejamos en blanco puro, más grandes y en negrita media. */
+.navbar.navbar-dark {
+  --bs-navbar-color: #fff;          /* color normal de los links */
+  --bs-navbar-hover-color: #ffd54f; /* color al pasar el mouse (amarillo) */
+  --bs-navbar-active-color: #fff;   /* color del link de la página actual */
+}
+
+.navbar .nav-link {
+  font-size: 1.1rem;
+  font-weight: 500;
+}
+
+/* El link de la página actual queda con un fondo suave tipo "botón" */
+.navbar .nav-link.active {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 0.5rem;
+}
+
+/* Logo (nombre de la tienda): más grande y más grueso que los demás links */
+.navbar .navbar-brand {
+  font-size: 1.9rem;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  margin-right: 2rem;
+}
+
+/* Logo de la portada: sin fondo, con un brillo blanco alrededor
+   para que el cilindro azul no se pierda sobre el degradado azul. */
+.logo-portada {
+  filter: drop-shadow(0 0 3px #fff) drop-shadow(0 0 8px rgba(255, 255, 255, 0.8));
+}

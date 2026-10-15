@@ -23,7 +23,9 @@ export const Navbar = () => {
     <nav className="navbar navbar-expand-lg navbar-dark bg-primary">
       <div className="container">
         {/* El logo sigue siendo Link: no necesita destacarse */}
-        <Link className="navbar-brand fw-bold" to="/" onClick={cerrarMenu}>
+        <Link className="navbar-brand fw-bold d-flex align-items-center" to="/" onClick={cerrarMenu}>
+          {/* Logo: la imagen está en la carpeta public */}
+          <img src="/logo.png" alt="Logo Gas El Volcán" height="52" className="me-2" />
           Gas El Volcán
         </Link>
 

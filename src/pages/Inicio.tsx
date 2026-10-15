@@ -11,6 +11,8 @@ export const Inicio = () => {
   return (
     <>
       <section className="hero rounded p-4 p-md-5 mb-5 text-white">
+        {/* logo-portada: borde de luz blanca (ver styles.css) para que se vea sobre el azul */}
+        <img src="/logo.png" alt="Logo Gas El Volcán" height="130" className="logo-portada mb-3 d-block" />
         <h1 className="display-5 fw-bold">Distribuidora de Gas El Volcán</h1>
         <p className="lead">Cilindros, accesorios y artefactos a gas con entrega en Chillán y alrededores.</p>
         <Link to="/catalogo" className="btn btn-light btn-lg">Ver catálogo</Link>
