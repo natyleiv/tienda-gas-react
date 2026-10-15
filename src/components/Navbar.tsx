@@ -75,6 +75,7 @@ export const Navbar = () => {
           <ul className="navbar-nav align-items-lg-center">
             <li className="nav-item">
               <Link className="nav-link" to="/carrito" onClick={cerrarMenu}>
+              <i className="bi bi-cart3 me-1"></i>
                 Carrito <span className="badge bg-light text-primary">{cantidadTotal}</span>
               </Link>
             </li>
