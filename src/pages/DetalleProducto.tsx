@@ -1,19 +1,38 @@
 // Detalle de un producto. La ruta es /catalogo/:id (igual que DetalleCurso en clases).
-import { useState } from "react";
+// El producto se pide al backend: GET /productos/{id}
+import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router";
-import { obtenerCategorias, obtenerProductos } from "../services/storage";
+import type { Producto } from "../types/Producto";
+import { obtenerProducto } from "../services/productoService";
 import { formatearPrecio } from "../services/tienda";
 import { useCarrito } from "../context/CarritoContext";
+import { Cargando } from "../components/Cargando";
 import { Mensaje } from "../components/Mensaje";
 
 export const DetalleProducto = () => {
   const { id } = useParams(); // siempre llega como texto (string)
   const { agregar } = useCarrito();
+  const [producto, setProducto] = useState<Producto | null>(null);
+  const [cargando, setCargando] = useState(true);
   const [mensaje, setMensaje] = useState({ tipo: "success" as "success" | "danger", texto: "" });
 
-  const producto = obtenerProductos().find((p) => p.id === Number(id));
+  // Se vuelve a ejecutar si cambia el id de la URL.
+  useEffect(() => {
+    const cargar = async () => {
+      setCargando(true);
+      try {
+        setProducto(await obtenerProducto(Number(id)));
+      } catch {
+        setProducto(null); // 404 u otro error: se muestra "no encontrado"
+      } finally {
+        setCargando(false);
+      }
+    };
+    cargar();
+  }, [id]);
 
-  // Si el id no existe, find devuelve undefined: se muestra un aviso.
+  if (cargando) return <Cargando texto="Cargando producto..." />;
+
   if (!producto) {
     return (
       <>
@@ -23,11 +42,10 @@ export const DetalleProducto = () => {
     );
   }
 
-  const categoria = obtenerCategorias().find((c) => c.id === producto.categoriaId);
   const sinStock = producto.stock <= 0;
 
   const manejarAgregar = () => {
-    const error = agregar(producto.id);
+    const error = agregar(producto);
     setMensaje(error ? { tipo: "danger", texto: error } : { tipo: "success", texto: "Producto agregado al carrito." });
   };
 
@@ -37,7 +55,7 @@ export const DetalleProducto = () => {
         <img src={producto.imagen} alt={producto.nombre} className="img-fluid rounded" />
       </div>
       <div className="col-12 col-md-7">
-        <span className="badge bg-secondary mb-2">{categoria?.nombre ?? "Sin categoría"}</span>
+        <span className="badge bg-secondary mb-2">{producto.categoriaNombre ?? "Sin categoría"}</span>
         <h1 className="h3">{producto.nombre}</h1>
         <p className="text-muted">Código: {producto.codigo}</p>
 

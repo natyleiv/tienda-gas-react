@@ -17,8 +17,8 @@ export const ProductosLista = ({ productos, categorias }: ProductosListaProps) =
   // Mensaje que aparece al agregar un producto (error de stock o confirmación).
   const [mensaje, setMensaje] = useState({ tipo: "success" as "success" | "danger", texto: "" });
 
-  const manejarAgregar = (id: number) => {
-    const error = agregar(id);
+  const manejarAgregar = (producto: Producto) => {
+    const error = agregar(producto);
     if (error) {
       setMensaje({ tipo: "danger", texto: error });
     } else {

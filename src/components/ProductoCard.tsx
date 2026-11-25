@@ -6,7 +6,7 @@ import { formatearPrecio } from "../services/tienda";
 interface ProductoCardProps {
   producto: Producto;
   nombreCategoria: string;
-  onAgregar: (id: number) => void;
+  onAgregar: (producto: Producto) => void;
 }
 
 export const ProductoCard = ({ producto, nombreCategoria, onAgregar }: ProductoCardProps) => {
@@ -47,7 +47,7 @@ export const ProductoCard = ({ producto, nombreCategoria, onAgregar }: ProductoC
             type="button"
             className="btn btn-primary btn-sm"
             disabled={sinStock}
-            onClick={() => onAgregar(producto.id)}
+            onClick={() => onAgregar(producto)}
           >
             Agregar al carrito
           </button>
