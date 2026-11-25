@@ -1,56 +1,86 @@
-// Administración de productos.
+// Administración de productos (datos desde la API).
 // - Administrador: crear, editar y eliminar productos.
-// - Vendedor: ver los productos y modificar SOLO el stock.
-import { useState } from "react";
+// - Vendedor: solo visualiza los productos (Anexo 1).
+import { useEffect, useState } from "react";
 import { useSesion } from "../context/SesionContext";
 import type { DatosProducto, Producto } from "../types/Producto";
-import { obtenerCategorias, obtenerProductos, guardarProductos } from "../services/storage";
+import type { Categoria } from "../types/Categoria";
+import {
+  obtenerProductos, obtenerCategorias, crearProducto, actualizarProducto, eliminarProducto,
+} from "../services/productoService";
+import { mensajeError } from "../api/axiosConfig";
 import { FormularioProducto } from "../components/FormularioProducto";
 import { FilaProducto } from "../components/FilaProducto";
+import { Cargando } from "../components/Cargando";
 import { Mensaje } from "../components/Mensaje";
 
 export const AdminProductos = () => {
   const { usuario } = useSesion();
-  const [productos, setProductos] = useState(obtenerProductos);
-  const [categorias] = useState(obtenerCategorias);
+  const [productos, setProductos] = useState<Producto[]>([]);
+  const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [editando, setEditando] = useState<Producto | null>(null);
-  const [mensaje, setMensaje] = useState("");
+  const [cargando, setCargando] = useState(true);
+  const [mensaje, setMensaje] = useState({ tipo: "success" as "success" | "danger", texto: "" });
 
-  if (!usuario) return null;
-  const esAdmin = usuario.rol === "administrador";
-
-  const actualizarLista = (lista: Producto[]) => {
-    setProductos(lista);
-    guardarProductos(lista);
-  };
-
-  const guardar = (datos: DatosProducto) => {
-    if (editando) {
-      actualizarLista(productos.map((p) => (p.id === editando.id ? { ...p, ...datos } : p)));
-      setMensaje("Producto actualizado.");
-      setEditando(null);
-    } else {
-      actualizarLista([...productos, { ...datos, id: Date.now() }]);
-      setMensaje("Producto creado.");
+  // Vuelve a pedir la lista al backend (después de crear, editar o eliminar).
+  const cargarProductos = async () => {
+    try {
+      setProductos(await obtenerProductos());
+    } catch (e) {
+      setMensaje({ tipo: "danger", texto: mensajeError(e) });
+    } finally {
+      setCargando(false);
     }
   };
 
-  const eliminar = (id: number) => {
-    if (!window.confirm("¿Eliminar este producto?")) return;
-    actualizarLista(productos.filter((p) => p.id !== id));
-    setMensaje("Producto eliminado.");
+  useEffect(() => {
+    const cargar = async () => {
+      try {
+        setCategorias(await obtenerCategorias());
+      } catch (e) {
+        setMensaje({ tipo: "danger", texto: mensajeError(e) });
+      }
+      await cargarProductos();
+    };
+    cargar();
+  }, []);
+
+  if (!usuario) return null;
+  const esAdmin = usuario.rol === "ADMINISTRADOR";
+
+  const guardar = async (datos: DatosProducto) => {
+    try {
+      if (editando) {
+        await actualizarProducto(editando.id, datos);
+        setMensaje({ tipo: "success", texto: "Producto actualizado." });
+        setEditando(null);
+      } else {
+        await crearProducto(datos);
+        setMensaje({ tipo: "success", texto: "Producto creado." });
+      }
+      await cargarProductos();
+      return true;
+    } catch (e) {
+      setMensaje({ tipo: "danger", texto: mensajeError(e) });
+      return false;
+    }
   };
 
-  // Solo cambia el stock (lo usa el vendedor).
-  const cambiarStock = (id: number, stock: number) => {
-    actualizarLista(productos.map((p) => (p.id === id ? { ...p, stock } : p)));
-    setMensaje("Stock actualizado.");
+  const eliminar = async (producto: Producto) => {
+    if (!window.confirm("¿Eliminar \"" + producto.nombre + "\"?")) return;
+    try {
+      await eliminarProducto(producto.id);
+      setMensaje({ tipo: "success", texto: "Producto eliminado." });
+      await cargarProductos();
+    } catch (e) {
+      setMensaje({ tipo: "danger", texto: mensajeError(e) });
+    }
   };
 
   return (
     <>
-      <h1 className="h3 mb-3">{esAdmin ? "Productos" : "Stock de productos"}</h1>
-      <Mensaje tipo="success" texto={mensaje} />
+      <h1 className="h3 mb-3">Productos</h1>
+      <Mensaje tipo={mensaje.tipo} texto={mensaje.texto} />
 
       {esAdmin && (
         <section className="card card-body mb-4">
@@ -70,26 +100,30 @@ export const AdminProductos = () => {
         </section>
       )}
 
-      <div className="table-responsive">
-        <table className="table table-striped align-middle">
-          <thead>
-            <tr><th>Código</th><th>Nombre</th><th>Categoría</th><th>Precio</th><th>Stock</th><th>Acciones</th></tr>
-          </thead>
-          <tbody>
-            {productos.map((p) => (
-              <FilaProducto
-                key={p.id}
-                producto={p}
-                nombreCategoria={categorias.find((c) => c.id === p.categoriaId)?.nombre ?? "Sin categoría"}
-                rol={usuario.rol}
-                onEditar={setEditando}
-                onEliminar={eliminar}
-                onCambiarStock={cambiarStock}
-              />
-            ))}
-          </tbody>
-        </table>
-      </div>
+      {cargando ? (
+        <Cargando texto="Cargando productos..." />
+      ) : (
+        <div className="table-responsive">
+          <table className="table table-striped align-middle">
+            <thead>
+              <tr>
+                <th>Código</th><th>Nombre</th><th>Categoría</th><th>Precio</th><th>Stock</th>
+                {esAdmin && <th>Acciones</th>}
+              </tr>
+            </thead>
+            <tbody>
+              {productos.map((p) => (
+                <FilaProducto
+                  key={p.id}
+                  producto={p}
+                  onEditar={esAdmin ? setEditando : undefined}
+                  onEliminar={esAdmin ? eliminar : undefined}
+                />
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </>
   );
 };

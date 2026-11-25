@@ -49,7 +49,7 @@ export const Navbar = () => {
             </li>
 
             {/* Opciones solo para administrador */}
-            {usuario?.rol === "administrador" && (
+            {usuario?.rol === "ADMINISTRADOR" && (
               <>
                 <li className="nav-item">
                   <NavLink className="nav-link" to="/admin/usuarios" onClick={cerrarMenu}>Usuarios</NavLink>
@@ -63,16 +63,11 @@ export const Navbar = () => {
               </>
             )}
 
-            {/* Opciones solo para vendedor */}
-            {usuario?.rol === "vendedor" && (
-              <>
-                <li className="nav-item">
-                  <NavLink className="nav-link" to="/admin/productos" onClick={cerrarMenu}>Stock</NavLink>
-                </li>
-                <li className="nav-item">
-                  <NavLink className="nav-link" to="/admin/usuarios" onClick={cerrarMenu}>Crear clientes</NavLink>
-                </li>
-              </>
+            {/* Opciones solo para vendedor (Anexo 1: solo visualiza productos) */}
+            {usuario?.rol === "VENDEDOR" && (
+              <li className="nav-item">
+                <NavLink className="nav-link" to="/admin/productos" onClick={cerrarMenu}>Productos</NavLink>
+              </li>
             )}
           </ul>
 
@@ -88,7 +83,7 @@ export const Navbar = () => {
               <>
                 <li className="nav-item">
                   <NavLink className="nav-link" to="/perfil" onClick={cerrarMenu}>
-                    {usuario.nombre} ({usuario.rol})
+                    {usuario.nombre} ({usuario.rol.toLowerCase()})
                   </NavLink>
                 </li>
                 <li className="nav-item">

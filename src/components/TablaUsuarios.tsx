@@ -1,5 +1,5 @@
 // Tabla de usuarios. Los botones de acción solo aparecen si se entregan
-// las funciones (el vendedor ve la tabla sin botones).
+// las funciones.
 import type { Usuario } from "../types/Usuario";
 
 interface TablaUsuariosProps {
@@ -30,7 +30,7 @@ export const TablaUsuarios = ({ usuarios, idSesion, onEditar, onEliminar, onDesb
               <td>{u.run}</td>
               <td>{u.nombre} {u.apellidos}</td>
               <td>{u.correo}</td>
-              <td>{u.rol}</td>
+              <td>{u.rol.toLowerCase()}</td>
               <td>{u.bloqueado ? <span className="badge bg-danger">Bloqueado</span> : <span className="badge bg-success">Activo</span>}</td>
               {onEditar && onEliminar && onDesbloquear && (
                 <td>

@@ -1,67 +1,90 @@
-// Administración de usuarios.
-// - Administrador: crear, editar, eliminar, desbloquear y asignar cualquier rol.
-// - Vendedor: solo puede crear usuarios con rol cliente (y ve la lista de clientes).
-import { useState } from "react";
+// Administración de usuarios (solo administrador, datos desde la API):
+// crear, editar, eliminar, desbloquear y asignar rol.
+import { useEffect, useState } from "react";
 import { useSesion } from "../context/SesionContext";
 import type { DatosUsuario, Usuario } from "../types/Usuario";
-import { obtenerUsuarios, guardarUsuarios } from "../services/storage";
+import {
+  obtenerUsuarios, crearUsuario, actualizarUsuario, eliminarUsuario, desbloquearUsuario,
+} from "../services/usuarioService";
+import { mensajeError } from "../api/axiosConfig";
 import { DOMINIOS_GENERALES } from "../services/validaciones";
 import { FormularioUsuario } from "../components/FormularioUsuario";
 import { TablaUsuarios } from "../components/TablaUsuarios";
+import { Cargando } from "../components/Cargando";
 import { Mensaje } from "../components/Mensaje";
 
 export const AdminUsuarios = () => {
-  const { usuario, actualizarSesion } = useSesion();
-  const [usuarios, setUsuarios] = useState(obtenerUsuarios);
+  const { usuario, actualizarUsuario: actualizarSesion } = useSesion();
+  const [usuarios, setUsuarios] = useState<Usuario[]>([]);
   const [editando, setEditando] = useState<Usuario | null>(null);
-  const [mensaje, setMensaje] = useState("");
+  const [cargando, setCargando] = useState(true);
+  const [mensaje, setMensaje] = useState({ tipo: "success" as "success" | "danger", texto: "" });
 
-  if (!usuario) return null;
-  const esAdmin = usuario.rol === "administrador";
-
-  // Actualiza el estado y LocalStorage a la vez.
-  const actualizarLista = (lista: Usuario[]) => {
-    setUsuarios(lista);
-    guardarUsuarios(lista);
-  };
-
-  const guardar = (datos: DatosUsuario) => {
-    // Nadie puede cambiar su propio rol (igual que en Perfil).
-    // El vendedor solo puede crear clientes: se fuerza el rol por seguridad.
-    const rol = editando?.id === usuario.id ? usuario.rol
-              : esAdmin ? datos.rol
-              : "cliente";
-
-    if (editando) {
-      actualizarLista(usuarios.map((u) => (u.id === editando.id ? { ...u, ...datos, rol } : u)));
-      setMensaje("Usuario actualizado.");
-      setEditando(null);
-      if (editando.id === usuario.id) actualizarSesion(); // si se editó a sí mismo
-    } else {
-      const nuevo: Usuario = { ...datos, rol, id: Date.now(), intentosFallidos: 0, bloqueado: false };
-      actualizarLista([...usuarios, nuevo]);
-      setMensaje("Usuario creado.");
+  const cargarUsuarios = async () => {
+    try {
+      setUsuarios(await obtenerUsuarios());
+    } catch (e) {
+      setMensaje({ tipo: "danger", texto: mensajeError(e) });
+    } finally {
+      setCargando(false);
     }
   };
 
-  const eliminar = (id: number) => {
+  // useEffect con [] se ejecuta una sola vez, al abrir la página.
+  useEffect(() => {
+    const cargar = async () => {
+      await cargarUsuarios();
+    };
+    cargar();
+  }, []);
+
+  if (!usuario) return null;
+
+  const guardar = async (datos: DatosUsuario) => {
+    try {
+      if (editando) {
+        // Nadie puede cambiar su propio rol: el backend lo ignora si lo intenta.
+        const actualizado = await actualizarUsuario(editando.id, datos);
+        setMensaje({ tipo: "success", texto: "Usuario actualizado." });
+        setEditando(null);
+        if (actualizado.id === usuario.id) actualizarSesion(actualizado); // se editó a sí mismo
+      } else {
+        await crearUsuario(datos);
+        setMensaje({ tipo: "success", texto: "Usuario creado." });
+      }
+      await cargarUsuarios();
+      return true;
+    } catch (e) {
+      setMensaje({ tipo: "danger", texto: mensajeError(e) });
+      return false;
+    }
+  };
+
+  const eliminar = async (id: number) => {
     if (!window.confirm("¿Eliminar este usuario?")) return;
-    actualizarLista(usuarios.filter((u) => u.id !== id));
-    setMensaje("Usuario eliminado.");
+    try {
+      await eliminarUsuario(id);
+      setMensaje({ tipo: "success", texto: "Usuario eliminado." });
+      await cargarUsuarios();
+    } catch (e) {
+      setMensaje({ tipo: "danger", texto: mensajeError(e) });
+    }
   };
 
-  const desbloquear = (id: number) => {
-    actualizarLista(usuarios.map((u) => (u.id === id ? { ...u, bloqueado: false, intentosFallidos: 0 } : u)));
-    setMensaje("Cuenta desbloqueada.");
+  const desbloquear = async (id: number) => {
+    try {
+      await desbloquearUsuario(id);
+      setMensaje({ tipo: "success", texto: "Cuenta desbloqueada." });
+      await cargarUsuarios();
+    } catch (e) {
+      setMensaje({ tipo: "danger", texto: mensajeError(e) });
+    }
   };
-
-  // El vendedor solo ve clientes.
-  const visibles = esAdmin ? usuarios : usuarios.filter((u) => u.rol === "cliente");
 
   return (
     <>
-      <h1 className="h3 mb-3">{esAdmin ? "Usuarios" : "Crear clientes"}</h1>
-      <Mensaje tipo="success" texto={mensaje} />
+      <h1 className="h3 mb-3">Usuarios</h1>
+      <Mensaje tipo={mensaje.tipo} texto={mensaje.texto} />
 
       <section className="card card-body mb-4">
         <h2 className="h5">{editando ? "Editar usuario" : "Nuevo usuario"}</h2>
@@ -69,11 +92,7 @@ export const AdminUsuarios = () => {
         <FormularioUsuario
           key={editando?.id ?? "nuevo"}
           inicial={editando ?? undefined}
-          rolesDisponibles={
-            editando?.id === usuario.id ? [usuario.rol]
-            : esAdmin ? ["administrador", "vendedor", "cliente"]
-            : ["cliente"]
-          }
+          rolesDisponibles={editando?.id === usuario.id ? [usuario.rol] : ["ADMINISTRADOR", "VENDEDOR", "CLIENTE"]}
           dominios={DOMINIOS_GENERALES}
           textoBoton={editando ? "Guardar cambios" : "Crear usuario"}
           limpiarAlGuardar={!editando}
@@ -82,13 +101,17 @@ export const AdminUsuarios = () => {
         />
       </section>
 
-      <TablaUsuarios
-        usuarios={visibles}
-        idSesion={usuario.id}
-        onEditar={esAdmin ? setEditando : undefined}
-        onEliminar={esAdmin ? eliminar : undefined}
-        onDesbloquear={esAdmin ? desbloquear : undefined}
-      />
+      {cargando ? (
+        <Cargando texto="Cargando usuarios..." />
+      ) : (
+        <TablaUsuarios
+          usuarios={usuarios}
+          idSesion={usuario.id}
+          onEditar={setEditando}
+          onEliminar={eliminar}
+          onDesbloquear={desbloquear}
+        />
+      )}
     </>
   );
 };

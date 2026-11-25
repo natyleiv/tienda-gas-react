@@ -1,4 +1,5 @@
 // Formulario para crear o editar un producto (solo lo usa el administrador).
+// Valida en el navegador y luego el backend vuelve a validar (@Valid).
 import { useState } from "react";
 import type { DatosProducto, Producto } from "../types/Producto";
 import type { Categoria } from "../types/Categoria";
@@ -8,7 +9,8 @@ interface FormularioProductoProps {
   inicial?: Producto;
   categorias: Categoria[];
   productos: Producto[]; // para revisar que el código no esté repetido
-  onGuardar: (datos: DatosProducto) => void;
+  // Devuelve true si el backend guardó el producto.
+  onGuardar: (datos: DatosProducto) => Promise<boolean>;
   onCancelar?: () => void;
 }
 
@@ -50,10 +52,11 @@ export const FormularioProducto = ({ inicial, categorias, productos, onGuardar, 
       : vacio,
   );
   const [errores, setErrores] = useState<ErroresProducto>({});
+  const [guardando, setGuardando] = useState(false);
 
   const cambiar = (campo: keyof FormTexto, valor: string) => setDatos({ ...datos, [campo]: valor });
 
-  const enviar = (e: React.SyntheticEvent<HTMLFormElement>) => {
+  const enviar = async (e: React.SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
 
     const nuevos: ErroresProducto = {};
@@ -66,7 +69,7 @@ export const FormularioProducto = ({ inicial, categorias, productos, onGuardar, 
     } else if (productos.some((p) => p.codigo === datos.codigo.trim() && p.id !== inicial?.id)) {
       nuevos.codigo = "Ya existe un producto con ese código.";
     }
-    if (!datos.nombre.trim() || datos.nombre.length > 100) nuevos.nombre = "El nombre es obligatorio (máximo 100 caracteres).";
+    if (!datos.nombre.trim() || datos.nombre.length > 80) nuevos.nombre = "El nombre es obligatorio (máximo 80 caracteres).";
     if (!datos.categoriaId) nuevos.categoriaId = "Selecciona una categoría.";
     if (!(precio > 0)) nuevos.precio = "El precio debe ser mayor a 0.";
     if (datos.precioOferta !== "" && !(Number(datos.precioOferta) > 0 && Number(datos.precioOferta) < precio)) {
@@ -79,18 +82,20 @@ export const FormularioProducto = ({ inicial, categorias, productos, onGuardar, 
     setErrores(nuevos);
     if (Object.keys(nuevos).length > 0) return;
 
-    onGuardar({
+    setGuardando(true);
+    const guardado = await onGuardar({
       codigo: datos.codigo.trim(),
       nombre: datos.nombre.trim(),
       categoriaId: Number(datos.categoriaId),
       precio,
-      precioOferta: datos.precioOferta === "" ? undefined : Number(datos.precioOferta),
+      precioOferta: datos.precioOferta === "" ? null : Number(datos.precioOferta),
       imagen: datos.imagen.trim() || vacio.imagen,
       stock,
       stockCritico,
       descripcion: datos.descripcion.trim(),
     });
-    if (!inicial) setDatos(vacio); // al crear, se limpia el formulario
+    setGuardando(false);
+    if (guardado && !inicial) setDatos(vacio); // al crear, se limpia el formulario
   };
 
   return (
@@ -126,7 +131,9 @@ export const FormularioProducto = ({ inicial, categorias, productos, onGuardar, 
       </div>
 
       <div className="d-flex gap-2">
-        <button type="submit" className="btn btn-primary">{inicial ? "Guardar cambios" : "Crear producto"}</button>
+        <button type="submit" className="btn btn-primary" disabled={guardando}>
+          {guardando ? "Guardando..." : inicial ? "Guardar cambios" : "Crear producto"}
+        </button>
         {onCancelar && (
           <button type="button" className="btn btn-outline-secondary" onClick={onCancelar}>Cancelar</button>
         )}

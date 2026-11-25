@@ -1,23 +1,41 @@
 // Administración de categorías (solo administrador): crear, renombrar y eliminar.
-import { useState } from "react";
+// Los cambios se guardan en la base de datos a través de la API.
+import { useEffect, useState } from "react";
 import type { Categoria } from "../types/Categoria";
-import { obtenerCategorias, guardarCategorias, obtenerProductos } from "../services/storage";
+import { obtenerCategorias, crearCategoria, actualizarCategoria, eliminarCategoria } from "../services/productoService";
+import { mensajeError } from "../api/axiosConfig";
 import { CampoFormulario } from "../components/CampoFormulario";
+import { Cargando } from "../components/Cargando";
 import { Mensaje } from "../components/Mensaje";
 
 export const AdminCategorias = () => {
-  const [categorias, setCategorias] = useState(obtenerCategorias);
+  const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [nombre, setNombre] = useState("");
   const [editando, setEditando] = useState<Categoria | null>(null);
   const [error, setError] = useState("");
+  const [cargando, setCargando] = useState(true);
+  const [guardando, setGuardando] = useState(false);
   const [mensaje, setMensaje] = useState({ tipo: "success" as "success" | "danger", texto: "" });
 
-  const actualizarLista = (lista: Categoria[]) => {
-    setCategorias(lista);
-    guardarCategorias(lista);
+  const cargarCategorias = async () => {
+    try {
+      setCategorias(await obtenerCategorias());
+    } catch (e) {
+      setMensaje({ tipo: "danger", texto: mensajeError(e) });
+    } finally {
+      setCargando(false);
+    }
   };
 
-  const guardar = (e: React.SyntheticEvent<HTMLFormElement>) => {
+  // useEffect con [] se ejecuta una sola vez, al abrir la página.
+  useEffect(() => {
+    const cargar = async () => {
+      await cargarCategorias();
+    };
+    cargar();
+  }, []);
+
+  const guardar = async (e: React.SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
     const limpio = nombre.trim();
 
@@ -25,23 +43,31 @@ export const AdminCategorias = () => {
       setError("El nombre es obligatorio.");
       return;
     }
-    // No se permiten dos categorías con el mismo nombre (sin importar mayúsculas).
+    // No se permiten dos categorías con el mismo nombre (el backend también lo revisa).
     const repetida = categorias.some((c) => c.nombre.toLowerCase() === limpio.toLowerCase() && c.id !== editando?.id);
     if (repetida) {
       setError("Ya existe una categoría con ese nombre.");
       return;
     }
 
-    if (editando) {
-      actualizarLista(categorias.map((c) => (c.id === editando.id ? { ...c, nombre: limpio } : c)));
-      setMensaje({ tipo: "success", texto: "Categoría actualizada." });
-    } else {
-      actualizarLista([...categorias, { id: Date.now(), nombre: limpio }]);
-      setMensaje({ tipo: "success", texto: "Categoría creada." });
+    setGuardando(true);
+    try {
+      if (editando) {
+        await actualizarCategoria(editando.id, limpio);
+        setMensaje({ tipo: "success", texto: "Categoría actualizada." });
+      } else {
+        await crearCategoria(limpio);
+        setMensaje({ tipo: "success", texto: "Categoría creada." });
+      }
+      setError("");
+      setNombre("");
+      setEditando(null);
+      await cargarCategorias();
+    } catch (err) {
+      setMensaje({ tipo: "danger", texto: mensajeError(err) });
+    } finally {
+      setGuardando(false);
     }
-    setError("");
-    setNombre("");
-    setEditando(null);
   };
 
   const editar = (categoria: Categoria) => {
@@ -50,15 +76,16 @@ export const AdminCategorias = () => {
     setError("");
   };
 
-  const eliminar = (categoria: Categoria) => {
-    // Coherencia de datos: no se puede borrar una categoría que tiene productos.
-    if (obtenerProductos().some((p) => p.categoriaId === categoria.id)) {
-      setMensaje({ tipo: "danger", texto: "No se puede eliminar: hay productos en \"" + categoria.nombre + "\"." });
-      return;
-    }
+  const eliminar = async (categoria: Categoria) => {
     if (!window.confirm("¿Eliminar la categoría?")) return;
-    actualizarLista(categorias.filter((c) => c.id !== categoria.id));
-    setMensaje({ tipo: "success", texto: "Categoría eliminada." });
+    try {
+      // Si tiene productos, el backend responde 409 con el motivo.
+      await eliminarCategoria(categoria.id);
+      setMensaje({ tipo: "success", texto: "Categoría eliminada." });
+      await cargarCategorias();
+    } catch (err) {
+      setMensaje({ tipo: "danger", texto: mensajeError(err) });
+    }
   };
 
   return (
@@ -69,7 +96,9 @@ export const AdminCategorias = () => {
       <form onSubmit={guardar} noValidate className="card card-body mb-4">
         <CampoFormulario id="nombreCategoria" etiqueta={editando ? "Editar categoría" : "Nueva categoría"} valor={nombre} onCambio={setNombre} error={error} />
         <div className="d-flex gap-2">
-          <button type="submit" className="btn btn-primary">{editando ? "Guardar cambios" : "Agregar"}</button>
+          <button type="submit" className="btn btn-primary" disabled={guardando}>
+            {guardando ? "Guardando..." : editando ? "Guardar cambios" : "Agregar"}
+          </button>
           {editando && (
             <button type="button" className="btn btn-outline-secondary" onClick={() => { setEditando(null); setNombre(""); setError(""); }}>
               Cancelar
@@ -78,24 +107,28 @@ export const AdminCategorias = () => {
         </div>
       </form>
 
-      <div className="table-responsive">
-        <table className="table table-striped align-middle">
-          <thead><tr><th>Nombre</th><th>Acciones</th></tr></thead>
-          <tbody>
-            {categorias.map((c) => (
-              <tr key={c.id}>
-                <td>{c.nombre}</td>
-                <td>
-                  <div className="d-flex gap-2">
-                    <button type="button" className="btn btn-sm btn-outline-primary" onClick={() => editar(c)}>Editar</button>
-                    <button type="button" className="btn btn-sm btn-outline-danger" onClick={() => eliminar(c)}>Eliminar</button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      {cargando ? (
+        <Cargando texto="Cargando categorías..." />
+      ) : (
+        <div className="table-responsive">
+          <table className="table table-striped align-middle">
+            <thead><tr><th>Nombre</th><th>Acciones</th></tr></thead>
+            <tbody>
+              {categorias.map((c) => (
+                <tr key={c.id}>
+                  <td>{c.nombre}</td>
+                  <td>
+                    <div className="d-flex gap-2">
+                      <button type="button" className="btn btn-sm btn-outline-primary" onClick={() => editar(c)}>Editar</button>
+                      <button type="button" className="btn btn-sm btn-outline-danger" onClick={() => eliminar(c)}>Eliminar</button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </>
   );
 };

@@ -1,63 +1,37 @@
 // Una fila de la tabla de productos de administración.
 // - Administrador: botones Editar y Eliminar.
-// - Vendedor: solo puede cambiar el stock (campo + botón Guardar stock).
-import { useState } from "react";
+// - Vendedor: solo visualiza (Anexo 1: el vendedor no modifica productos).
 import type { Producto } from "../types/Producto";
-import type { Rol } from "../types/Usuario";
 import { formatearPrecio, precioFinal } from "../services/tienda";
 
 interface FilaProductoProps {
   producto: Producto;
-  nombreCategoria: string;
-  rol: Rol;
-  onEditar: (producto: Producto) => void;
-  onEliminar: (id: number) => void;
-  onCambiarStock: (id: number, stock: number) => void;
+  // Si no llegan las funciones, la fila queda de solo lectura.
+  onEditar?: (producto: Producto) => void;
+  onEliminar?: (producto: Producto) => void;
 }
 
-export const FilaProducto = ({ producto, nombreCategoria, rol, onEditar, onEliminar, onCambiarStock }: FilaProductoProps) => {
-  // Estado propio de la fila: el stock que el vendedor está escribiendo.
-  const [stockNuevo, setStockNuevo] = useState(String(producto.stock));
-  const stockValido = stockNuevo !== "" && Number.isInteger(Number(stockNuevo)) && Number(stockNuevo) >= 0;
+export const FilaProducto = ({ producto, onEditar, onEliminar }: FilaProductoProps) => {
   const critico = producto.stock <= producto.stockCritico;
 
   return (
     <tr>
       <td>{producto.codigo}</td>
       <td>{producto.nombre}</td>
-      <td>{nombreCategoria}</td>
+      <td>{producto.categoriaNombre ?? "Sin categoría"}</td>
       <td>{formatearPrecio(precioFinal(producto))}</td>
       <td>
         {producto.stock}{" "}
         {critico && <span className="badge bg-warning text-dark">Stock crítico</span>}
       </td>
-      <td>
-        {rol === "administrador" && (
+      {onEditar && onEliminar && (
+        <td>
           <div className="d-flex gap-2">
             <button type="button" className="btn btn-sm btn-outline-primary" onClick={() => onEditar(producto)}>Editar</button>
-            <button type="button" className="btn btn-sm btn-outline-danger" onClick={() => onEliminar(producto.id)}>Eliminar</button>
+            <button type="button" className="btn btn-sm btn-outline-danger" onClick={() => onEliminar(producto)}>Eliminar</button>
           </div>
-        )}
-        {rol === "vendedor" && (
-          <div className="input-group input-group-sm">
-            <input
-              type="number"
-              className="form-control"
-              aria-label={"Nuevo stock de " + producto.nombre}
-              value={stockNuevo}
-              onChange={(e) => setStockNuevo(e.target.value)}
-            />
-            <button
-              type="button"
-              className="btn btn-outline-primary"
-              disabled={!stockValido}
-              onClick={() => onCambiarStock(producto.id, Number(stockNuevo))}
-            >
-              Guardar stock
-            </button>
-          </div>
-        )}
-      </td>
+        </td>
+      )}
     </tr>
   );
 };
