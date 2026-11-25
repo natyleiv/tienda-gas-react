@@ -1,10 +1,9 @@
 // Formulario de usuario reutilizado en:
 //  - Registro público (solo rol cliente)
-//  - Administración (crear y editar usuarios; el vendedor solo crea clientes)
+//  - Administración (el administrador crea y edita usuarios)
 import { useState } from "react";
 import type { DatosUsuario, Rol, Usuario } from "../types/Usuario";
 import { regiones } from "../data/regiones";
-import { obtenerUsuarios } from "../services/storage";
 import { validarUsuario } from "../services/validaciones";
 import type { ErroresUsuario } from "../services/validaciones";
 import { CampoFormulario } from "./CampoFormulario";
@@ -15,7 +14,8 @@ interface FormularioUsuarioProps {
   dominios: string[]; // dominios de correo permitidos
   textoBoton: string;
   limpiarAlGuardar?: boolean;
-  onGuardar: (datos: DatosUsuario) => void;
+  // Devuelve true si el backend guardó los datos (Promise: la respuesta tarda).
+  onGuardar: (datos: DatosUsuario) => Promise<boolean>;
   onCancelar?: () => void;
 }
 
@@ -28,12 +28,12 @@ const datosVacios: DatosUsuario = {
   fechaNacimiento: "",
   region: "",
   direccion: "",
-  rol: "cliente",
+  rol: "CLIENTE",
 };
 
 // Comprueba que un texto sea realmente un Rol (igual que la validación del Header en clases).
 const esRol = (valor: string): valor is Rol =>
-  valor === "administrador" || valor === "vendedor" || valor === "cliente";
+  valor === "ADMINISTRADOR" || valor === "VENDEDOR" || valor === "CLIENTE";
 
 export const FormularioUsuario = ({
   inicial,
@@ -45,30 +45,33 @@ export const FormularioUsuario = ({
   onCancelar,
 }: FormularioUsuarioProps) => {
   // Un solo estado con todos los datos del formulario, y otro con los errores.
-  const [datos, setDatos] = useState<DatosUsuario>(inicial ?? { ...datosVacios, rol: rolesDisponibles[0] });
+  // Al editar, la contraseña parte vacía: si no se escribe una nueva, se mantiene la actual.
+  const [datos, setDatos] = useState<DatosUsuario>(
+    inicial ? { ...inicial, password: "" } : { ...datosVacios, rol: rolesDisponibles[0] },
+  );
   const [errores, setErrores] = useState<ErroresUsuario>({});
+  const [guardando, setGuardando] = useState(false);
 
   // Cambia UN campo y deja el resto igual (spread + propiedad calculada).
   const cambiar = (campo: keyof DatosUsuario, valor: string) => {
     setDatos({ ...datos, [campo]: valor });
   };
 
-  const enviar = (e: React.SyntheticEvent<HTMLFormElement>) => {
+  const enviar = async (e: React.SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault(); // evita que la página se recargue
 
-    const nuevosErrores = validarUsuario(
-      { ...datos, correo: datos.correo.trim().toLowerCase(), run: datos.run.trim().toUpperCase() },
-      obtenerUsuarios(),
-      dominios,
-      inicial?.id,
-    );
+    const limpios = { ...datos, correo: datos.correo.trim().toLowerCase(), run: datos.run.trim().toUpperCase() };
+    const nuevosErrores = validarUsuario(limpios, dominios, inicial !== undefined);
     setErrores(nuevosErrores);
 
-    // Si hay errores, no se guarda.
+    // Si hay errores, no se envía al backend.
     if (Object.keys(nuevosErrores).length > 0) return;
 
-    onGuardar({ ...datos, correo: datos.correo.trim().toLowerCase(), run: datos.run.trim().toUpperCase() });
-    if (limpiarAlGuardar) {
+    setGuardando(true);
+    const guardado = await onGuardar(limpios);
+    setGuardando(false);
+
+    if (guardado && limpiarAlGuardar) {
       setDatos({ ...datosVacios, rol: rolesDisponibles[0] });
     }
   };
@@ -92,7 +95,7 @@ export const FormularioUsuario = ({
           <CampoFormulario id="correo" etiqueta="Correo" tipo="email" valor={datos.correo} onCambio={(v) => cambiar("correo", v)} error={errores.correo} />
         </div>
         <div className="col-12 col-md-6">
-          <CampoFormulario id="password" etiqueta="Contraseña (4 a 10 caracteres)" tipo="password" valor={datos.password} onCambio={(v) => cambiar("password", v)} error={errores.password} />
+          <CampoFormulario id="password" etiqueta={inicial ? "Nueva contraseña (opcional)" : "Contraseña (4 a 10 caracteres)"} tipo="password" valor={datos.password} onCambio={(v) => cambiar("password", v)} error={errores.password} />
         </div>
         <div className="col-12 col-md-6">
           <CampoFormulario id="region" etiqueta="Región" valor={datos.region} onCambio={(v) => cambiar("region", v)} opciones={regiones.map((r) => ({ valor: r, texto: r }))} error={errores.region} />
@@ -110,13 +113,15 @@ export const FormularioUsuario = ({
             onCambio={(v) => {
               if (esRol(v)) setDatos({ ...datos, rol: v });
             }}
-            opciones={rolesDisponibles.map((r) => ({ valor: r, texto: r }))}
+            opciones={rolesDisponibles.map((r) => ({ valor: r, texto: r.toLowerCase() }))}
           />
         </div>
       </div>
 
       <div className="d-flex gap-2">
-        <button type="submit" className="btn btn-primary">{textoBoton}</button>
+        <button type="submit" className="btn btn-primary" disabled={guardando}>
+          {guardando ? "Guardando..." : textoBoton}
+        </button>
         {onCancelar && (
           <button type="button" className="btn btn-outline-secondary" onClick={onCancelar}>Cancelar</button>
         )}

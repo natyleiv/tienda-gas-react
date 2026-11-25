@@ -18,10 +18,10 @@ import { NoEncontrada } from "./pages/NoEncontrada";
 
 const App = () => {
   return (
-    <>
+    <div className="d-flex flex-column min-vh-100">
       {/* Navbar y Footer se repiten en todas las páginas, por eso van aquí una sola vez */}
       <Navbar />
-      <main className="container py-4">
+      <main className="container py-4 flex-grow-1">
         <Routes>
           {/* Páginas públicas */}
           <Route path="/" element={<Inicio />} />
@@ -38,15 +38,15 @@ const App = () => {
           {/* Administración: cada ruta indica qué roles pueden entrar */}
           <Route
             path="/admin/usuarios"
-            element={<RutaProtegida roles={["administrador", "vendedor"]}><AdminUsuarios /></RutaProtegida>}
+            element={<RutaProtegida roles={["ADMINISTRADOR"]}><AdminUsuarios /></RutaProtegida>}
           />
           <Route
             path="/admin/productos"
-            element={<RutaProtegida roles={["administrador", "vendedor"]}><AdminProductos /></RutaProtegida>}
+            element={<RutaProtegida roles={["ADMINISTRADOR", "VENDEDOR"]}><AdminProductos /></RutaProtegida>}
           />
           <Route
             path="/admin/categorias"
-            element={<RutaProtegida roles={["administrador"]}><AdminCategorias /></RutaProtegida>}
+            element={<RutaProtegida roles={["ADMINISTRADOR"]}><AdminCategorias /></RutaProtegida>}
           />
 
           {/* Cualquier otra dirección */}
@@ -54,7 +54,7 @@ const App = () => {
         </Routes>
       </main>
       <Footer />
-    </>
+    </div>
   );
 };
 

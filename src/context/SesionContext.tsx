@@ -1,70 +1,82 @@
-// Contexto de sesión. Funciona igual que el PerfilContext visto en clases:
-// guarda "quién es el usuario actual" y lo deja disponible en toda la aplicación.
-import { createContext, useContext, useState } from "react";
+// Contexto de sesión (como el PerfilContext visto en clases): guarda quién es el
+// usuario actual y lo deja disponible en toda la aplicación.
+// Ahora el inicio de sesión lo valida el backend, que devuelve un token JWT.
+// El token y el usuario se guardan en LocalStorage para que la sesión
+// siga activa al recargar la página.
+import { createContext, useContext, useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import type { Usuario } from "../types/Usuario";
-import { obtenerUsuarios, guardarUsuarios, obtenerIdSesion, guardarIdSesion } from "../services/storage";
-
-const MAX_INTENTOS = 3;
+import { login, obtenerUsuarioActual } from "../services/authService";
+import { guardarTokens, guardarUsuario, leerToken, leerUsuarioGuardado, borrarSesion } from "../services/sesion";
+import { mensajeError } from "../api/axiosConfig";
 
 interface SesionContextType {
   usuario: Usuario | null;
+  sesionExpirada: boolean; // true si el backend cerró la sesión por token vencido
   // Devuelve un mensaje de error, o null si el inicio de sesión fue correcto.
-  iniciarSesion: (correo: string, password: string) => string | null;
+  iniciarSesion: (correo: string, password: string) => Promise<string | null>;
   cerrarSesion: () => void;
-  // Vuelve a leer al usuario desde LocalStorage (se usa tras editar el perfil).
-  actualizarSesion: () => void;
+  // Reemplaza los datos del usuario (se usa después de editar el perfil).
+  actualizarUsuario: (usuario: Usuario) => void;
 }
 
 const SesionContext = createContext<SesionContextType | null>(null);
 
-// Busca en LocalStorage al usuario cuya sesión está guardada.
-function leerUsuarioDeSesion(): Usuario | null {
-  const id = obtenerIdSesion();
-  if (id === null) return null;
-  return obtenerUsuarios().find((u) => u.id === id) ?? null;
-}
-
 export const SesionProvider = ({ children }: { children: ReactNode }) => {
-  // Se pasa la función (sin paréntesis) para que se ejecute solo la primera vez.
-  const [usuario, setUsuario] = useState<Usuario | null>(leerUsuarioDeSesion);
+  // Al cargar la página se recupera la sesión guardada (si existe).
+  const [usuario, setUsuario] = useState<Usuario | null>(leerUsuarioGuardado);
+  const [sesionExpirada, setSesionExpirada] = useState(false);
 
-  const iniciarSesion = (correo: string, password: string): string | null => {
-    const usuarios = obtenerUsuarios();
-    const encontrado = usuarios.find((u) => u.correo === correo);
+  useEffect(() => {
+    // Si había sesión guardada, se piden los datos actualizados al backend.
+    // Si el token ya venció, axiosConfig intenta renovarlo automáticamente.
+    const revisarSesion = async () => {
+      if (!leerToken()) return;
+      try {
+        const actual = await obtenerUsuarioActual();
+        guardarUsuario(actual);
+        setUsuario(actual);
+      } catch {
+        // Si falla, el evento "sesion-expirada" se encarga de cerrar la sesión.
+      }
+    };
+    revisarSesion();
 
-    if (!encontrado) return "Correo o contraseña incorrectos.";
-    if (encontrado.bloqueado) return "La cuenta está bloqueada por 3 intentos fallidos. Contacta a un administrador.";
+    // axiosConfig lanza este evento cuando no pudo renovar el token.
+    const alExpirar = () => {
+      setUsuario(null);
+      setSesionExpirada(true);
+    };
+    window.addEventListener("sesion-expirada", alExpirar);
+    return () => window.removeEventListener("sesion-expirada", alExpirar);
+  }, []);
 
-    if (encontrado.password !== password) {
-      // Contraseña mala: se suma un intento y, al llegar a 3, se bloquea.
-      const intentos = encontrado.intentosFallidos + 1;
-      const bloqueado = intentos >= MAX_INTENTOS;
-      guardarUsuarios(
-        usuarios.map((u) => (u.id === encontrado.id ? { ...u, intentosFallidos: intentos, bloqueado } : u)),
-      );
-      return bloqueado
-        ? "Cuenta bloqueada por 3 intentos fallidos."
-        : "Correo o contraseña incorrectos. Intentos restantes: " + (MAX_INTENTOS - intentos);
+  const iniciarSesion = async (correo: string, password: string): Promise<string | null> => {
+    try {
+      // El backend revisa la contraseña, los intentos fallidos y el bloqueo.
+      const respuesta = await login(correo, password);
+      guardarTokens(respuesta.token, respuesta.refreshToken);
+      guardarUsuario(respuesta.usuario);
+      setUsuario(respuesta.usuario);
+      setSesionExpirada(false);
+      return null;
+    } catch (error) {
+      return mensajeError(error);
     }
-
-    // Contraseña correcta: se reinician los intentos y se guarda la sesión.
-    const sinIntentos = { ...encontrado, intentosFallidos: 0 };
-    guardarUsuarios(usuarios.map((u) => (u.id === encontrado.id ? sinIntentos : u)));
-    guardarIdSesion(encontrado.id);
-    setUsuario(sinIntentos);
-    return null;
   };
 
   const cerrarSesion = () => {
-    guardarIdSesion(null);
+    borrarSesion();
     setUsuario(null);
   };
 
-  const actualizarSesion = () => setUsuario(leerUsuarioDeSesion());
+  const actualizarUsuario = (nuevo: Usuario) => {
+    guardarUsuario(nuevo);
+    setUsuario(nuevo);
+  };
 
   return (
-    <SesionContext value={{ usuario, iniciarSesion, cerrarSesion, actualizarSesion }}>
+    <SesionContext value={{ usuario, sesionExpirada, iniciarSesion, cerrarSesion, actualizarUsuario }}>
       {children}
     </SesionContext>
   );

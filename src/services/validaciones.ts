@@ -1,5 +1,5 @@
 // Reglas de validación reutilizadas por los formularios.
-import type { DatosUsuario, Usuario } from "../types/Usuario";
+import type { DatosUsuario } from "../types/Usuario";
 
 export const DOMINIOS_GENERALES = ["duoc.cl", "profesor.duoc.cl", "gmail.com"];
 export const DOMINIOS_REGISTRO = ["duoc.cl"];
@@ -56,32 +56,25 @@ export type ErroresUsuario = Partial<Record<keyof DatosUsuario, string>>;
 
 // Valida todos los campos de un usuario. Devuelve los errores encontrados
 // (si el objeto vuelve vacío, el formulario está correcto).
-// idActual sirve al editar: permite que el usuario conserve su propio correo/RUN.
+// Que el RUN o el correo no estén repetidos lo revisa el backend (responde 409).
+// passwordOpcional: al editar se puede dejar la contraseña vacía para no cambiarla.
 export function validarUsuario(
   datos: DatosUsuario,
-  usuarios: Usuario[],
   dominios: string[],
-  idActual?: number,
+  passwordOpcional = false,
 ): ErroresUsuario {
   const errores: ErroresUsuario = {};
-  const otros = usuarios.filter((u) => u.id !== idActual);
 
-  if (!validarRun(datos.run)) {
-    errores.run = "RUN inválido (ej: 12345678-5).";
-  } else if (otros.some((u) => u.run === datos.run)) {
-    errores.run = "Ese RUN ya está registrado.";
-  }
-
+  if (!validarRun(datos.run)) errores.run = "RUN inválido (ej: 12345678-5).";
   if (!datos.nombre.trim()) errores.nombre = "El nombre es obligatorio.";
   if (!datos.apellidos.trim()) errores.apellidos = "Los apellidos son obligatorios.";
 
   if (!validarCorreo(datos.correo, dominios)) {
     errores.correo = "Correo inválido. Dominios permitidos: " + dominios.join(", ");
-  } else if (otros.some((u) => u.correo === datos.correo)) {
-    errores.correo = "Ese correo ya está registrado.";
   }
 
-  if (!validarPassword(datos.password)) {
+  const sinPassword = passwordOpcional && datos.password === "";
+  if (!sinPassword && !validarPassword(datos.password)) {
     errores.password = "La contraseña debe tener entre 4 y 10 caracteres.";
   }
 

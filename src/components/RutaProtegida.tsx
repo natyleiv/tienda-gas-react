@@ -1,5 +1,6 @@
 // Protege una página según el rol. Se usa en App.tsx envolviendo la página:
-// <RutaProtegida roles={["administrador"]}><AdminCategorias /></RutaProtegida>
+// <RutaProtegida roles={["ADMINISTRADOR"]}><AdminCategorias /></RutaProtegida>
+// Esto solo oculta páginas: la seguridad real la aplica el backend con el token JWT.
 import type { ReactNode } from "react";
 import { Link, Navigate } from "react-router";
 import { useSesion } from "../context/SesionContext";
@@ -23,7 +24,7 @@ export const RutaProtegida = ({ roles, children }: RutaProtegidaProps) => {
     return (
       <div className="alert alert-warning">
         <h2 className="h5">Acceso no autorizado</h2>
-        <p className="mb-2">Tu rol ({usuario.rol}) no puede ver esta página.</p>
+        <p className="mb-2">Tu rol ({usuario.rol.toLowerCase()}) no puede ver esta página.</p>
         <Link to="/">Volver al inicio</Link>
       </div>
     );
