@@ -101,7 +101,10 @@ export const Carrito = () => {
         <p className="mb-1">Boleta N° {boleta.id} · {new Date(boleta.fecha).toLocaleString("es-CL")}</p>
         <p className="mb-1">Total pagado: <strong>{formatearPrecio(boleta.total)}</strong></p>
         <p>Despacho a: {boleta.direccion}</p>
-        <Link to="/catalogo" className="btn btn-primary">Seguir comprando</Link>
+        <div className="d-flex flex-wrap gap-2">
+          <Link to={"/compras/" + boleta.id} className="btn btn-outline-success">Ver detalle de la compra</Link>
+          <Link to="/catalogo" className="btn btn-primary">Seguir comprando</Link>
+        </div>
       </div>
     );
   }
