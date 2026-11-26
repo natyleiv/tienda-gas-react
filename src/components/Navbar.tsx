@@ -20,7 +20,7 @@ export const Navbar = () => {
   };
 
   return (
-    <nav className="navbar navbar-expand-xl navbar-dark bg-primary">
+    <nav className="navbar navbar-expand-xxl navbar-dark bg-primary">
       <div className="container">
         {/* El logo sigue siendo Link: no necesita destacarse */}
         <Link className="navbar-brand fw-bold d-flex align-items-center" to="/" onClick={cerrarMenu}>
@@ -52,6 +52,12 @@ export const Navbar = () => {
             {usuario?.rol === "ADMINISTRADOR" && (
               <>
                 <li className="nav-item">
+                  <NavLink className="nav-link" to="/admin/dashboard" onClick={cerrarMenu}>Dashboard</NavLink>
+                </li>
+                <li className="nav-item">
+                  <NavLink className="nav-link" to="/admin/ordenes" onClick={cerrarMenu}>Órdenes</NavLink>
+                </li>
+                <li className="nav-item">
                   <NavLink className="nav-link" to="/admin/usuarios" onClick={cerrarMenu}>Usuarios</NavLink>
                 </li>
                 <li className="nav-item">
@@ -63,10 +69,22 @@ export const Navbar = () => {
               </>
             )}
 
-            {/* Opciones solo para vendedor (Anexo 1: solo visualiza productos) */}
+            {/* Opciones solo para vendedor (Anexo 1: visualiza productos y órdenes) */}
             {usuario?.rol === "VENDEDOR" && (
+              <>
+                <li className="nav-item">
+                  <NavLink className="nav-link" to="/admin/productos" onClick={cerrarMenu}>Productos</NavLink>
+                </li>
+                <li className="nav-item">
+                  <NavLink className="nav-link" to="/admin/ordenes" onClick={cerrarMenu}>Órdenes</NavLink>
+                </li>
+              </>
+            )}
+
+            {/* Historial de compras del cliente */}
+            {usuario?.rol === "CLIENTE" && (
               <li className="nav-item">
-                <NavLink className="nav-link" to="/admin/productos" onClick={cerrarMenu}>Productos</NavLink>
+                <NavLink className="nav-link" to="/mis-compras" onClick={cerrarMenu}>Mis compras</NavLink>
               </li>
             )}
           </ul>
@@ -83,7 +101,9 @@ export const Navbar = () => {
               <>
                 <li className="nav-item">
                   <NavLink className="nav-link" to="/perfil" onClick={cerrarMenu}>
-                    {usuario.nombre} ({usuario.rol.toLowerCase()})
+                    {/* Solo el nombre (el rol se ve en Mi perfil) para que el menú quepa en una línea */}
+                    <i className="bi bi-person-circle me-1"></i>
+                    {usuario.nombre}
                   </NavLink>
                 </li>
                 <li className="nav-item">

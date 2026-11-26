@@ -14,6 +14,10 @@ import { Contacto } from "./pages/Contacto";
 import { AdminUsuarios } from "./pages/AdminUsuarios";
 import { AdminProductos } from "./pages/AdminProductos";
 import { AdminCategorias } from "./pages/AdminCategorias";
+import { AdminOrdenes } from "./pages/AdminOrdenes";
+import { Dashboard } from "./pages/Dashboard";
+import { MisCompras } from "./pages/MisCompras";
+import { DetalleCompra } from "./pages/DetalleCompra";
 import { NoEncontrada } from "./pages/NoEncontrada";
 
 const App = () => {
@@ -34,6 +38,9 @@ const App = () => {
 
           {/* Cualquier usuario con sesión */}
           <Route path="/perfil" element={<RutaProtegida><Perfil /></RutaProtegida>} />
+          <Route path="/mis-compras" element={<RutaProtegida><MisCompras /></RutaProtegida>} />
+          {/* El backend revisa que el cliente solo vea sus propias compras */}
+          <Route path="/compras/:id" element={<RutaProtegida><DetalleCompra /></RutaProtegida>} />
 
           {/* Administración: cada ruta indica qué roles pueden entrar */}
           <Route
@@ -47,6 +54,14 @@ const App = () => {
           <Route
             path="/admin/categorias"
             element={<RutaProtegida roles={["ADMINISTRADOR"]}><AdminCategorias /></RutaProtegida>}
+          />
+          <Route
+            path="/admin/ordenes"
+            element={<RutaProtegida roles={["ADMINISTRADOR", "VENDEDOR"]}><AdminOrdenes /></RutaProtegida>}
+          />
+          <Route
+            path="/admin/dashboard"
+            element={<RutaProtegida roles={["ADMINISTRADOR"]}><Dashboard /></RutaProtegida>}
           />
 
           {/* Cualquier otra dirección */}
